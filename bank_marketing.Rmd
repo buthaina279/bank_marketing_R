@@ -65,8 +65,16 @@ library(ROCR)      # ROC curve
 #http://archive.ics.uci.edu/ml/datasets/Bank+Marketing
 
 #read the data set
-bank <- read_csv2("data/bank-additional-full.csv")
+bank <- read.csv2("data/bank-additional-full.csv", dec = ".")
 ```
+
+convert all characters to factors
+```{r}
+bank[sapply(bank, is.character)] <- lapply(bank[sapply(bank, is.character)], 
+                                       as.factor)
+```
+
+
 #Portfolio Builder Exercise 1
 
 ```{r}
@@ -153,9 +161,6 @@ ggplot(bank, aes(y)) +
 
 Due to the impalance in the classes we are going to split the dataset into train and test with stratified sample 
 
-```{r}
-bank <- bank %>% mutate_if(is.ordered, factor, ordered = FALSE)
-```
 
 ```{r}
 set.seed(123) # for reproducibility
@@ -168,18 +173,9 @@ test  <- testing(split)
 take smaller train set to check if the training method works well
 ```{r}
 set.seed(123) # for reproducibility
-split_understand <- initial_split(bank, strata = "y", prop = 0.2)
-train_understand <- training(split_understand)
+split <- initial_split(bank, strata = "y", prop = 0.025)
+train <- training(split)
 
-```
-##try something 
-
-
-```{r}
-set.seed(123) # for reproducibility
-split_df <- initial_split(df_bank, strata = "y", prop = 0.7)
-train_df <- training(split_df)
-test_df  <- testing(split_df)
 ```
 
 
@@ -236,14 +232,15 @@ cv <- trainControl(
   method = "repeatedcv", 
   number = 10, 
   repeats = 5,
-  #classProbs = TRUE
+  classProbs = TRUE,
+  summaryFunction = twoClassSummary
   )
 
 # 4. create a hyperparameter grid search
 hyper_grid <- expand.grid(k = seq(2, 8, by = 2))
 ```
 
-because "knn" can not handle categorical features I got this error 
+
 ```{r}
 knn_fit <- train(
   y ~ ., 
@@ -251,47 +248,27 @@ knn_fit <- train(
   method = "knn", 
   trControl = cv, 
   tuneGrid = hyper_grid,
-  #na.action = na.pass
+  metric = "ROC"
   )
 
 ```
 
-Create and a apply a blueprint of feature engineering processes that you think will help your model improve.
 
 ```{r}
+knn_fit
+```
 
-#read the data set
-bank <- read.csv2("data/bank-additional-full.csv", dec = ".")
 
-bank <- bank %>% 
-  select(-duration, -nr.employed) %>% 
-  mutate(y = as_factor(y))
-
-names(bank[,17:19])
-
-set.seed(123) # for reproducibility
-split <- initial_split(bank[,17:19], strata = "y", prop = 0.00625)
-train <- training(split)
-
+Create and a apply a blueprint of feature engineering processes that you think will help your model improve.
+```{r}
 blueprint <- recipe(y ~ ., data = train) %>%
   step_nzv(all_nominal()) %>%
   step_center(all_numeric(), -all_outcomes()) %>%
   step_scale(all_numeric(), -all_outcomes()) %>%
-  step_integer(all_nominal()) %>% 
-  step_dummy(all_nominal(), -all_outcomes(), one_hot = TRUE)
-
-# 4. create a hyperparameter grid search
-hyper_grid <- expand.grid(k = seq(2, 8, by = 2))
-
-cv <- trainControl(
-  method = "repeatedcv", 
-  number = 10, 
-  repeats = 5,
-  classProbs = TRUE,
-  summaryFunction = twoClassSummary
-  )
-
+   step_dummy(all_nominal(), -all_outcomes(), one_hot = TRUE)
+  #step_integer(all_nominal()) %>%
 ```
+
 
 Now reapply the KNN model to your data that has been feature engineered.
 
@@ -305,7 +282,7 @@ knn_fit_bp <- train(
   metric = "ROC"
   )
 ```
-this was for train_understand
+
 ```{r}
 knn_fit_bp
 ```
@@ -315,114 +292,6 @@ Did your model performance improve?
 
 
 
-
-
-
-
-
-
-
-#Portfolio Builder Exercise 2
-
-##1
-Depending on the type of response variable, apply a linear or logistic regression model.
-
-First, apply the model to your data without pre-applying feature engineering processes.
-```{r}
-preBp_model <- train(
-  y ~ ., 
-  data = train_understand, 
-  method = "glm",
-  family = "binomial",
-  trControl = cv
-)
-
-```
-
-
-Now reapply the model to your data that has feature engineered.(blueprint)
-```{r}
-Bp_model <- train(
-  blueprint, 
-  data = train, 
-  method = "glm",
-  family = "binomial",
-  trControl = cv
-)
-
-```
-
-
-Did your model performance improve?
-
-
-##2
-Apply a principal component regression model.
-Perform a grid search over several components.
-```{r slide-21}
-set.seed(123)
-cv_pcr <- train(
-  y ~ .,
-  data = train, 
-  trControl = cv,
-  method = "pcr", #<<
-  preProcess = c("zv", "center", "scale"), #<<
-  tuneGrid = hyper_grid
-  )
-```
-
-
-```{r slide-21}
-# model with lowest RMSE
-cv_pcr$bestTune
-
-cv_pcr$results %>%
-  filter(ncomp == as.numeric(cv_pcr$bestTune))
-
-# plot cross-validated RMSE
-plot(cv_pcr)
-```
-
-Identify and explain the performance of the optimal model.
-
-##3
-Apply a partial least squares regression model.
-Perform a grid search over several components.
-```{r}
-# PLS
-set.seed(123)
-cv_pls <- train(
-  blueprint,
-  data = train, 
-  trControl = cv,
-  method = "pls", #<<
-  tuneGrid = hyper_grid
-  )
-
-# model with lowest RMSE
-cv_pls$bestTune
-
-cv_pls$results %>%
-  filter(ncomp == as.numeric(cv_pls$bestTune))
-
-# plot cross-validated RMSE
-plot(cv_pls)
-```
-
-Identify and explain the performance of the optimal model.
-
-
-##4
-
-Apply a regularized regression model.
-Perform a grid search across alpha parameter values ranging between 0–1.
-```{r}
-
-```
-
-What is the optimal alpha and lambda values?
-What is the MSE and RMSE for this optimal model?
-How does it compare to your previous models?
 
 
 

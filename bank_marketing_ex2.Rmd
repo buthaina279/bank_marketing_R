@@ -1,0 +1,177 @@
+---
+title: "bank_marketin_ex2"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+# Packages required
+library(rsample)
+library(caret)
+library(tidyverse)
+library(inspectdf) 
+library(ISLR)
+library(dplyr)
+library(ggplot2)
+library(recipes)
+library(psych)
+
+# Model interpretability packages
+library(vip)       # variable importance
+library(ROCR)      # ROC curve
+```
+
+
+```{r}
+#http://archive.ics.uci.edu/ml/datasets/Bank+Marketing
+
+#read the data set
+bank <- read.csv2("data/bank-additional-full.csv", dec = ".")
+```
+
+convert all characters to factors
+```{r}
+bank[sapply(bank, is.character)] <- lapply(bank[sapply(bank, is.character)], 
+                                       as.factor)
+```
+
+drop duration and nr.employed columns 
+```{r}
+bank <- select(bank, c (-duration, - nr.employed))
+```
+
+take smaller train set to check if the training method works well
+```{r}
+set.seed(123) # for reproducibility
+split <- initial_split(bank, strata = "y", prop = 0.025)
+train <- training(split)
+
+```
+
+```{r}
+
+cv <- trainControl(
+  method = "repeatedcv", 
+  number = 10, 
+  repeats = 5
+  )
+
+# 4. create a hyperparameter grid search
+hyper_grid <- expand.grid(k = seq(2, 8, by = 2))
+```
+
+Create and a apply a blueprint of feature engineering processes that you think will help your model improve.
+```{r}
+blueprint <- recipe(y ~ ., data = train) %>%
+  step_nzv(all_nominal()) %>%
+  step_center(all_numeric(), -all_outcomes()) %>%
+  step_scale(all_numeric(), -all_outcomes()) %>%
+   step_dummy(all_nominal(), -all_outcomes(), one_hot = TRUE)
+  #step_integer(all_nominal()) %>%
+```
+
+
+#Portfolio Builder Exercise 2
+
+##1
+Depending on the type of response variable, apply a linear or logistic regression model.
+
+First, apply the model to your data without pre-applying feature engineering processes.
+
+** multicliniarity check ho to solve it ???
+```{r}
+set.seed(123)
+(preBp_model <- train(
+  y ~ ., 
+  data = train, 
+  method = "glm",
+  family = "binomial",
+  trControl = trainControl(method = "cv", number = 10)
+))
+
+```
+
+
+Now reapply the model to your data that has feature engineered.(blueprint/ preprocess?)
+```{r}
+set.seed(123)
+(Bp_model <- train(
+  blueprint, 
+  data = train, 
+  method = "glm",
+  family = "binomial",
+  trControl = trainControl(method = "cv", number = 10)
+))
+
+
+```
+
+
+Did your model performance improve?
+
+
+##2
+Apply a principal component regression model.
+Perform a grid search over several components.
+Identify and explain the performance of the optimal model.
+
+principal component regression model is not applicable for classification tasks!
+
+
+##3
+Apply a partial least squares regression model.
+Perform a grid search over several components.
+
+*****this should not work just to make sure try and test it 
+```{r}
+
+cv <- trainControl(
+  method = "repeatedcv", 
+  number = 10, 
+  repeats = 5
+  )
+
+hyper_grid_p <- expand.grid(ncomp = seq(2, 10, by = 2))
+
+
+# PLS
+set.seed(123)
+cv_pls <- train(
+  blueprint,
+  data = train, 
+  trControl = cv,
+  method = "pls", #<<
+  tuneGrid = hyper_grid_p
+  )
+
+# model with lowest RMSE
+cv_pls$bestTune
+
+cv_pls$results %>%
+  filter(ncomp == as.numeric(cv_pls$bestTune))
+
+# plot cross-validated RMSE
+plot(cv_pls)
+```
+
+Identify and explain the performance of the optimal model.
+
+
+##4
+
+Apply a regularized regression model.
+Perform a grid search across alpha parameter values ranging between 0–1.
+
+regularized regression model can not be applied in classification tasks!
+
+What is the optimal alpha and lambda values?
+What is the MSE and RMSE for this optimal model?
+How does it compare to your previous models?
+
+
+
+
+
