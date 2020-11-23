@@ -57,7 +57,7 @@ MARS is not applicable for classification problems, therefore, we are going to u
 
 ```{r slide-50}
 # number of features
-features <- setdiff(names(train), "Sale_Price")
+features <- setdiff(names(train), "y")
 
 # perform basic random forest model
 fit_default <- ranger(
@@ -97,6 +97,10 @@ What we do next should be driven by attributes of our data:
 - Likely will favor .blue[variance split rule]
 - May benefit from .blue[sampling w/o replacement]
 
+is the data unbalanced ??
+feature engineering or design the tree 
+without replacment
+
 ```{r slide-52a}
   train %>%
   summarise_if(is.factor, n_distinct) %>% 
@@ -106,9 +110,13 @@ What we do next should be driven by attributes of our data:
 
 
 - We have highly correlated data (both btwn features and with target)
+SOLUtion ::
 - May favor lower mtry and
 - lower node size to help decorrelate the trees<br><br>
 
+pca or remove those columns with high correlation
+
+use lower mtry to reduce the corr 
 
 ```{r slide-52b}
 cor_matrix <- train %>%
@@ -163,6 +171,7 @@ oob_error <- function(trees) {
 }
 
 # tuning grid
+#begin with large 
 trees <- seq(10, 200, by = 10)
 
 (rmse <- trees %>% purrr::map_dbl(oob_error))
@@ -174,7 +183,8 @@ trees <- seq(10, 200, by = 10)
 
 ```{r slide-53b}
 ggplot(data.frame(trees, rmse), aes(trees, rmse)) +
-  geom_line(size = 1)
+  geom_line(size = 1) +
+  scale_x_continuous(breaks = trees)
 ```
 
 # Tuning 
@@ -326,6 +336,7 @@ fit_final %>%
 
 
 Interaction between two influential variables:
+what is the point from this ?????? yes 
 
 ```{r slide-61}
 fit_final %>%
