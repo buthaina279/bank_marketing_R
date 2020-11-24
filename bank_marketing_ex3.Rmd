@@ -43,6 +43,17 @@ names(bank)
 head(bank)
 ```
 
+
+take the 70% train dats set 
+
+```{r}
+set.seed(123) # for reproducibility
+split <- initial_split(bank, strata = "y", prop = 0.7)
+train <- training(split)
+test  <- testing(split)
+
+```
+
 take smaller train set to check if the training method works well
 ```{r}
 set.seed(123) # for reproducibility
@@ -92,10 +103,9 @@ sqrt(fit_default$prediction.error)
 
 What we do next should be driven by attributes of our data:
 
-- Half our variables are numeric
-- Half are categorical variables with moderate number of levels
-- Likely will favor .blue[variance split rule]
-- May benefit from .blue[sampling w/o replacement]
+- 8 variables are numeric
+- 12 categorical variables with moderate number of levels
+
 
 is the data unbalanced ??
 feature engineering or design the tree 
@@ -110,13 +120,15 @@ without replacment
 
 
 - We have highly correlated data (both btwn features and with target)
-SOLUtion ::
+
+Solution:
 - May favor lower mtry and
-- lower node size to help decorrelate the trees<br><br>
+- lower node size to help decorrelate the trees
 
-pca or remove those columns with high correlation
-
-use lower mtry to reduce the corr 
+OR
+use PCA 
+OR 
+remove those columns with high correlation
 
 ```{r slide-52b}
 cor_matrix <- train %>%
@@ -147,9 +159,7 @@ But before we tune, do we have enough trees
 
 - Some pkgs provide OOB error for each tree
 - __ranger__ only provides overall OOB
-
-How can I know the number of tune grid for tree!!!??????
-why "trees <- seq(10, 1000, by = 20)" how can I know from what to what????????
+- from this chunk we can know the number of trees with the lowest number of RMSE
 
 ```{r slide-53a}
 # number of features
@@ -172,19 +182,26 @@ oob_error <- function(trees) {
 
 # tuning grid
 #begin with large 
-trees <- seq(10, 200, by = 10)
+trees <- seq(10, 1000, by = 20)
 
 (rmse <- trees %>% purrr::map_dbl(oob_error))
 ```
 
+arrange the data frame based on the lowest rmse
+```{r}
+data.frame(trees, rmse) %>% 
+  arrange(rmse)
+```
 
-- using $p \times 10 = 800$ trees is sufficient
+- the best number of trees is 970 trees with 0.3163265 rmse
+
+- using $p \times 10 = 180$ trees is sufficient
 - may increase if we decrease mtry or sample size
 
 ```{r slide-53b}
 ggplot(data.frame(trees, rmse), aes(trees, rmse)) +
-  geom_line(size = 1) +
-  scale_x_continuous(breaks = trees)
+  geom_line(size = 1)
+  # scale_x_continuous(breaks = trees)
 ```
 
 # Tuning 
@@ -224,7 +241,7 @@ for(i in seq_len(nrow(hyper_grid))) {
   fit <- ranger(
     formula         = y ~ ., 
     data            = train, 
-    num.trees       = 100,
+    num.trees       = 970,
     mtry            = hyper_grid$mtry[i],            #<<
     min.node.size   = hyper_grid$min.node.size[i],   #<<
     replace         = hyper_grid$replace[i],         #<<
@@ -275,18 +292,14 @@ Once you find your optimal model:
 - include `importance` parameter
 - crank up the # of trees to ensure stable vi estimates
 
-
-should I take the the results from the first row ??? but how can I know how many trees I need????
-is it right to write "replace = TRUE" as I see from the results above there are true and false??????
-what does below 0 means??
 ```{r slide-58}
 fit_final <- ranger(
   formula         = y ~ ., 
   data            = train, 
-  num.trees       = 100,              #<<
-  mtry            = 5,
+  num.trees       = 970,              #<<
+  mtry            = 2,
   min.node.size   = 5,
-  sample.fraction = .50,
+  sample.fraction = .80,
   replace         = TRUE,
   importance      = 'permutation',     #<< 
   respect.unordered.factors = 'order',
@@ -302,19 +315,19 @@ vip(fit_final, num_features = 15)
 
 Partial dependence plots (PDPs), Individual Conditional Expectation (ICE) curves, and other approaches allow us to understand how _important_ variables influence our model's predictions:
 
-PDP: Overall Home Quality
+PDP: emp.var.rate
 
 ```{r slide-59a}
 fit_final %>%
-  pdp::partial(pred.var = "euribor3m", train = as.data.frame(train)) %>%
+  pdp::partial(pred.var = "emp.var.rate", train = as.data.frame(train)) %>%
   autoplot()
 ```
 
-ICE: Overall Home Quality
+ICE: emp.var.rate
 
 ```{r slide-59b}
 fit_final %>%
-  pdp::partial(pred.var = "euribor3m", train = as.data.frame(train), ice = TRUE) %>%
+  pdp::partial(pred.var = "emp.var.rate", train = as.data.frame(train), ice = TRUE) %>%
   autoplot(alpha = 0.05, center = TRUE)
 ```
 
@@ -322,7 +335,7 @@ PDP: Above Ground SqFt
 
 ```{r slide-60a}
 fit_final %>%
-  pdp::partial(pred.var = "month", train = as.data.frame(train)) %>%
+  pdp::partial(pred.var = "euribor3m", train = as.data.frame(train)) %>%
   autoplot()
 ```
 
@@ -330,7 +343,7 @@ ICE: Above Ground SqFt
 
 ```{r slide-60b}
 fit_final %>%
-  pdp::partial(pred.var = "month", train = as.data.frame(train), ice = TRUE) %>%
+  pdp::partial(pred.var = "euribor3m", train = as.data.frame(train), ice = TRUE) %>%
   autoplot(alpha = 0.05, center = TRUE)
 ```
 
@@ -341,7 +354,7 @@ what is the point from this ?????? yes
 ```{r slide-61}
 fit_final %>%
   pdp::partial(
-    pred.var = c("euribor3m", "month"),
+    pred.var = c("emp.var.rate", "euribor3m"),
     train = as.data.frame(train)
     ) %>%
   plotPartial(

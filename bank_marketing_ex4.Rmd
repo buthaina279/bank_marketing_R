@@ -10,9 +10,23 @@ knitr::opts_chunk$set(echo = TRUE)
 # Prereqs 
 
 ```{r slide-3}
+# Packages required
+library(rsample)
+library(caret)
+library(tidyverse)
+library(inspectdf) 
+library(ISLR)
+library(dplyr)
+library(ggplot2)
+library(recipes)
+library(psych)
+
+# Model interpretability packages
+library(vip)       # variable importance
+library(ROCR)      # ROC curve
+
 library(gbm)
 library(xgboost)
-library(vip)
 library(pdp)
 ```
 
@@ -58,10 +72,10 @@ bank_gbm <- gbm(
   formula = y ~ .,
   data = train,
   distribution = "gaussian", # or bernoulli, multinomial, etc. 
-  n.trees = 5000, 
+  n.trees = 970, 
   shrinkage = 0.1, 
   interaction.depth = 1, 
-  n.minobsinnode = 10, 
+  n.minobsinnode = 5, 
   cv.folds = 5 
   )  
 
