@@ -60,18 +60,23 @@ train <- training(split)
 
 
 
+```{r}
+#bank$y <- as.numeric(bank$y)
+```
 
 
 #1
 Apply a basic GBM model with the same features you used in the random forest module.
 
+is true to apply 970 trees over all gbm and x and s??
 
+how can I calculate the error?? the accuracy?
 ```{r slide-17}
 set.seed(123)
 bank_gbm <- gbm(
-  formula = y ~ .,
+  formula = (unclass(y)-1) ~ ., # unclass(y)-1 is to transform the number into {0,1} for bernoulli
   data = train,
-  distribution = "gaussian", # or bernoulli, multinomial, etc. 
+  distribution = "bernoulli", # or bernoulli, multinomial, etc. 
   n.trees = 970, 
   shrinkage = 0.1, 
   interaction.depth = 1, 
@@ -83,7 +88,7 @@ bank_gbm <- gbm(
 min_MSE <- which.min(bank_gbm$cv.error)
 
 # get MSE and compute RMSE
-sqrt(bank_gbm$cv.error[min_MSE])
+#sqrt(bank_gbm$cv.error[min_MSE])
 ```
 
 - Apply the default hyperparameter settings with a learning rate set to 0.10. 
@@ -91,13 +96,13 @@ sqrt(bank_gbm$cv.error[min_MSE])
 ```{r slide-17}
 set.seed(123)
 bank_gbm_10 <- gbm(
-  formula = y ~ .,
+  formula = (unclass(y)-1) ~ .,
   data = train,
-  distribution = "gaussian", # or bernoulli, multinomial, etc. 
-  n.trees = 5000, 
+  distribution = "bernoulli", # or bernoulli, multinomial, etc. 
+  n.trees = 970, 
   shrinkage = 0.10, 
   interaction.depth = 1, 
-  n.minobsinnode = 10, 
+  n.minobsinnode = 5, 
   cv.folds = 5 
   )  
 
@@ -105,13 +110,23 @@ bank_gbm_10 <- gbm(
 min_MSE <- which.min(bank_gbm_10$cv.error)
 
 # get MSE and compute RMSE
-sqrt(bank_gbm_10$cv.error[min_MSE])
+#sqrt(bank_gbm_10$cv.error[min_MSE])
+
+print(bank_gbm_10)
+
 ```
 - How does model performance compare to the random forest module?
 
 - How many trees were applied? 
+970 trees
+
 Use CV or OOB
 
+the gbm package comes with a default function called gbm.perf() to determine the optimum number of iterations. 
+
+we will also see two plots indicating the optimum number of trees based on the respective technique used. The graph on the left indicates the error on test (green line) and train data set (black line). The blue dotted line points the optimum number of iterations. One can also clearly observe that the beyond a certain a point (169 iterations for the “cv” method), the error on the test data appears to increase because of overfitting. Hence, our model will stop the training procedure on the given optimum number of iterations.
+
+the optimum number of iterations is 48 based on "cv"
 ```{r slide-22}
 gbm.perf(bank_gbm_10, method = "cv") # or "OOB"
 ```
@@ -139,10 +154,10 @@ This model run takes ~2 mins
 ```{r slide-28}
 set.seed(123)
 bank_gbm1 <- gbm(
-  formula = y ~ .,
+  formula = (unclass(y)-1) ~ .,
   data = train,
-  distribution = "gaussian", # or bernoulli, multinomial, etc. #<<
-  n.trees = 5000, #<<
+  distribution = "bernoulli", # or bernoulli, multinomial, etc. #<<
+  n.trees = 970, #<<
   shrinkage = 0.01, #<<
   interaction.depth = 3, #<<
   n.minobsinnode = 10, #<<
@@ -177,10 +192,10 @@ bag_frac <- c(.5, .65, .8) #<<
 for(i in bag_frac) {
   set.seed(123)
   m <- gbm(
-    formula = y ~ .,
+    formula = (unclass(y)-1) ~ .,
     data = train,
-    distribution = "gaussian",
-    n.trees = 6000, 
+    distribution = "bernoulli",
+    n.trees = 970, 
     shrinkage = 0.01, 
     interaction.depth = 7, 
     n.minobsinnode = 5,
@@ -213,14 +228,14 @@ ___Pro tip: If you have I cardinality categorical features, label or ordinal enc
 
 ```{r slide-35}
 library(recipes)
-xgb_prep <- recipe(Sale_Price ~ ., data = ames_train) %>%
+xgb_prep <- recipe(y ~ ., data = train) %>%
   step_other(all_nominal(), threshold = .005) %>%
   step_integer(all_nominal()) %>%
-  prep(training = ames_train, retain = TRUE) %>%
+  prep(training = train, retain = TRUE) %>%
   juice()
 
-X <- as.matrix(xgb_prep[setdiff(names(xgb_prep), "Sale_Price")])
-Y <- xgb_prep$Sale_Price
+X <- as.matrix(xgb_prep[setdiff(names(xgb_prep), "y")])
+Y <- xgb_prep$y
 ```
 
 # First XGBoost model 
@@ -234,11 +249,11 @@ ___This grid search takes ~20 secs___
 
 ```{r slide-36}
 set.seed(123)
-ames_xgb <- xgb.cv(
+bank_xgb <- xgb.cv(
   data = X,
   label = Y,
-  nrounds = 5000,
-  objective = "reg:linear",
+  nrounds = 970,
+  objective = "binary:logistic",
   early_stopping_rounds = 50, 
   nfold = 10,
   verbose = 0,
@@ -262,12 +277,13 @@ As a comparison, if you one-hot encoded the feature set it takes 30 mins to run 
 ___This grid search takes ~1.5 min___
 
 How do we know that params = list(eta = .05) and what the results above ???
+what is nrounds = 6000,???
 ```{r slide-37}
 set.seed(123)
 ames_xgb <- xgb.cv(
   data = X,
   label = Y,
-  nrounds = 6000,
+  nrounds = 970,
   objective = "reg:linear",
   early_stopping_rounds = 50, 
   nfold = 10,
