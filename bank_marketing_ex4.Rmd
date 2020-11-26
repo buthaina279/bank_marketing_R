@@ -87,7 +87,7 @@ bank_gbm <- gbm(
 min_MSE <- which.min(bank_gbm$cv.error)
 min_MSE
 # get MSE and compute RMSE
-#sqrt(bank_gbm$cv.error[min_MSE])
+bank_gbm$cv.error[min_MSE]
 ```
 
 - Apply the default hyperparameter settings with a learning rate set to 0.10. 
@@ -524,7 +524,7 @@ Create partial dependence plots for the top two most influential features.
 ```{r slide-45a}
 bank_final_xgb %>%
   partial(
-    pred.var = "Gr_Liv_Area", 
+    pred.var = "pdays", 
     n.trees = bank_final_xgb$niter, 
     grid.resolution = 50, 
     train = X
@@ -537,7 +537,7 @@ bank_final_xgb %>%
 ```{r slide-45b}
 bank_final_xgb %>%
   partial(
-    pred.var = "Gr_Liv_Area", 
+    pred.var = "pdays", 
     n.trees = bank_final_xgb$niter, 
     grid.resolution = 50, 
     train = X,

@@ -242,20 +242,20 @@ hyper_grid <- expand.grid(k = seq(2, 26, by = 2))
 
 
 ```{r}
-knn_fit <- train(
-  y ~ ., 
-  data = train, 
-  method = "knn", 
-  trControl = cv, 
-  tuneGrid = hyper_grid,
-  metric = "ROC"
-  )
+#knn_fit <- train(
+ # y ~ ., 
+  #data = train, 
+  #method = "knn", 
+  #trControl = cv, 
+  #tuneGrid = hyper_grid,
+  #metric = "ROC"
+  #)
 
 ```
 
 
 ```{r}
-knn_fit
+#knn_fit
 ```
 
 
@@ -289,7 +289,13 @@ knn_fit_bp
 
 Did your model performance improve?
 
+```{r}
+save.image("myWorkspace_ex1.rds")
+```
 
+```{r}
+#load("myWorkspace_ex1.rds")
+```
 
 
 
