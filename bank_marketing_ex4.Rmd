@@ -50,6 +50,11 @@ drop duration and nr.employed columns
 bank <- select(bank, c (-duration, - nr.employed))
 ```
 
+convert all values in y into 0/1 in order to be accepted by xgboost
+```{r}
+bank$y <-  as.numeric(bank$y)-1
+```
+
 take smaller train set to check if the training method works well
 ```{r}
 set.seed(123) # for reproducibility
@@ -59,22 +64,16 @@ train <- training(split)
 ```
 
 
-
-```{r}
-#bank$y <- as.numeric(bank$y)
-```
-
-
 #1
 Apply a basic GBM model with the same features you used in the random forest module.
 
 is true to apply 970 trees over all gbm and x and s??
 
-how can I calculate the error?? the accuracy?
+how can I calculate the error?? the accuracy for classification ?
 ```{r slide-17}
 set.seed(123)
 bank_gbm <- gbm(
-  formula = (unclass(y)-1) ~ ., # unclass(y)-1 is to transform the number into {0,1} for bernoulli
+  formula = y ~ ., # unclass(y)-1 is to transform the number into {0,1} for bernoulli
   data = train,
   distribution = "bernoulli", # or bernoulli, multinomial, etc. 
   n.trees = 970, 
@@ -86,7 +85,7 @@ bank_gbm <- gbm(
 
 # find index for n trees with minimum CV error
 min_MSE <- which.min(bank_gbm$cv.error)
-
+min_MSE
 # get MSE and compute RMSE
 #sqrt(bank_gbm$cv.error[min_MSE])
 ```
@@ -96,7 +95,7 @@ min_MSE <- which.min(bank_gbm$cv.error)
 ```{r slide-17}
 set.seed(123)
 bank_gbm_10 <- gbm(
-  formula = (unclass(y)-1) ~ .,
+  formula = y ~ .,
   data = train,
   distribution = "bernoulli", # or bernoulli, multinomial, etc. 
   n.trees = 970, 
@@ -154,7 +153,7 @@ This model run takes ~2 mins
 ```{r slide-28}
 set.seed(123)
 bank_gbm1 <- gbm(
-  formula = (unclass(y)-1) ~ .,
+  formula = y ~ .,
   data = train,
   distribution = "bernoulli", # or bernoulli, multinomial, etc. #<<
   n.trees = 970, #<<
@@ -168,7 +167,7 @@ bank_gbm1 <- gbm(
 min_MSE <- which.min(bank_gbm1$cv.error)
 
 # get MSE and compute RMSE
-sqrt(bank_gbm1$cv.error[min_MSE])
+#sqrt(bank_gbm1$cv.error[min_MSE])
 
 gbm.perf(bank_gbm1, method = "cv")
 ```
@@ -192,7 +191,7 @@ bag_frac <- c(.5, .65, .8) #<<
 for(i in bag_frac) {
   set.seed(123)
   m <- gbm(
-    formula = (unclass(y)-1) ~ .,
+    formula = y ~ .,
     data = train,
     distribution = "bernoulli",
     n.trees = 970, 
@@ -203,7 +202,8 @@ for(i in bag_frac) {
     cv.folds = 10 
     )
   # compute RMSE
-  print(sqrt(min(m$cv.error)))
+  #print(sqrt(min(m$cv.error)))
+  print(min(m$cv.error))
 }
 ```
 
@@ -259,7 +259,7 @@ bank_xgb <- xgb.cv(
   verbose = 0,
   )  
 
-ames_xgb$evaluation_log %>% tail()
+bank_xgb$evaluation_log %>% tail()
 ```
 
 
@@ -280,18 +280,18 @@ How do we know that params = list(eta = .05) and what the results above ???
 what is nrounds = 6000,???
 ```{r slide-37}
 set.seed(123)
-ames_xgb <- xgb.cv(
+bank_xgb_eta <- xgb.cv(
   data = X,
   label = Y,
   nrounds = 970,
-  objective = "reg:linear",
+  objective = "binary:logistic",
   early_stopping_rounds = 50, 
   nfold = 10,
   verbose = 0,
   params = list(eta = .05) #<<
   )  
 
-ames_xgb$evaluation_log %>% tail()
+bank_xgb_eta$evaluation_log %>% tail()
 ```
 
 # Tuning 
@@ -308,13 +308,14 @@ ames_xgb$evaluation_log %>% tail()
 
 ___This grid search takes ~30 min___
 
+
 ```{r slide-38}
 # grid
 hyper_grid <- expand.grid(
   eta = .05,
   max_depth = c(1, 3, 5, 7, 9), #<<
   min_child_weight = c(1, 3, 5, 7, 9), #<<
-  rmse = 0 # a place to dump results
+  error = 0 # a place to dump results
   )
 
 # grid search
@@ -323,8 +324,8 @@ for(i in seq_len(nrow(hyper_grid))) {
   m <- xgb.cv(
     data = X,
     label = Y,
-    nrounds = 6000,
-    objective = "reg:linear",
+    nrounds = 970,
+    objective = "binary:logistic",
     early_stopping_rounds = 50, 
     nfold = 10,
     verbose = 0,
@@ -334,10 +335,10 @@ for(i in seq_len(nrow(hyper_grid))) {
       min_child_weight = hyper_grid$min_child_weight[i] #<<
     ) #<<
   )
-  hyper_grid$rmse[i] <- min(m$evaluation_log$test_rmse_mean)
+  hyper_grid$error[i] <- min(m$evaluation_log$test_error_mean)
 }
 
-arrange(hyper_grid, rmse)
+arrange(hyper_grid, error)
 ```
 
 # Tuning 
@@ -355,6 +356,7 @@ arrange(hyper_grid, rmse)
 
 ___This grid search takes ~12 min___
 
+you have to put max_depth and min_child_weight from the previous output
 ```{r slide-39}
 # grid
 hyper_grid <- expand.grid(
@@ -363,7 +365,7 @@ hyper_grid <- expand.grid(
   min_child_weight = 3,
   subsample = c(.5, .65, .8, 1), #<<
   colsample_bytree = c(.5, .65, .8, 1), #<<
-  rmse = 0 # a place to dump results
+  error = 0 # a place to dump results
   )
 
 # grid search
@@ -372,8 +374,8 @@ for(i in seq_len(nrow(hyper_grid))) {
   m <- xgb.cv(
     data = X,
     label = Y,
-    nrounds = 6000,
-    objective = "reg:linear",
+    nrounds = 970,
+    objective = "binary:logistic",
     early_stopping_rounds = 50, 
     nfold = 10,
     verbose = 0,
@@ -385,10 +387,10 @@ for(i in seq_len(nrow(hyper_grid))) {
       colsample_bytree = hyper_grid$colsample_bytree[i] #<<
     ) #<<
   )
-  hyper_grid$rmse[i] <- min(m$evaluation_log$test_rmse_mean)
+  hyper_grid$error[i] <- min(m$evaluation_log$test_error_mean)
 }
 
-arrange(hyper_grid, rmse)
+arrange(hyper_grid, error)
 ```
 
 
@@ -418,7 +420,7 @@ hyper_grid <- expand.grid(
   #gamma = c(1, 100, 1000, 10000),
   #lambda = c(1e-2, 0.1, 1, 100, 1000, 10000),
   alpha = c(1e-2, 0.1, 1, 100, 1000, 10000), #<<
-  rmse = 0 # a place to dump results
+  error = 0 # a place to dump results
   )
 
 # grid search
@@ -427,8 +429,8 @@ for(i in seq_len(nrow(hyper_grid))) {
   m <- xgb.cv(
     data = X,
     label = Y,
-    nrounds = 6000,
-    objective = "reg:linear",
+    nrounds = 970,
+    objective = "binary:logistic",
     early_stopping_rounds = 50, 
     nfold = 10,
     verbose = 0,
@@ -443,10 +445,10 @@ for(i in seq_len(nrow(hyper_grid))) {
       alpha = hyper_grid$alpha[i] #<<
     ) 
   )
-  hyper_grid$rmse[i] <- min(m$evaluation_log$test_rmse_mean)
+  hyper_grid$error[i] <- min(m$evaluation_log$test_error_mean)
 }
 
-arrange(hyper_grid, rmse)
+arrange(hyper_grid, error)
 ```
 
 # Tuning 
@@ -476,8 +478,8 @@ set.seed(123)
 final_cv <- xgb.cv(
   data = X,
   label = Y,
-  nrounds = 6000,
-  objective = "reg:linear",
+  nrounds = 970,
+  objective = "binary:logistic",
   early_stopping_rounds = 50, 
   nfold = 10,
   verbose = 0,
@@ -485,11 +487,11 @@ final_cv <- xgb.cv(
   ) 
 
 # train final model
-ames_final_xgb <- xgboost(
+bank_final_xgb <- xgboost(
   data = X,
   label = Y,
   nrounds = final_cv$best_iteration, #<<
-  objective = "reg:linear",
+  objective = "binary:logistic",
   params = params, #<<
   verbose = 0
 )
@@ -504,7 +506,7 @@ ames_final_xgb <- xgboost(
 Pick your best GBM model. 
 
 ```{r slide-44}
-vip::vip(ames_final_xgb, num_features = 25)
+vip::vip(bank_final_xgb, num_features = 25)
 ```
 
 - Which 10 features are considered most influential? 
@@ -520,10 +522,10 @@ Create partial dependence plots for the top two most influential features.
 # Feature Effects (PDP)
 
 ```{r slide-45a}
-ames_final_xgb %>%
+bank_final_xgb %>%
   partial(
     pred.var = "Gr_Liv_Area", 
-    n.trees = ames_final_xgb$niter, 
+    n.trees = bank_final_xgb$niter, 
     grid.resolution = 50, 
     train = X
     ) %>%
@@ -533,10 +535,10 @@ ames_final_xgb %>%
 # Feature Effects (ICE)
 
 ```{r slide-45b}
-ames_final_xgb %>%
+bank_final_xgb %>%
   partial(
     pred.var = "Gr_Liv_Area", 
-    n.trees = ames_final_xgb$niter, 
+    n.trees = bank_final_xgb$niter, 
     grid.resolution = 50, 
     train = X,
     ice = TRUE
