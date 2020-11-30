@@ -83,7 +83,7 @@ Depending on the type of response variable, apply a linear or logistic regressio
 First, apply the model to your data without pre-applying feature engineering processes.
 
 ** multicliniarity check ho to solve it ???
-```{r}
+```{r, cache=TRUE}
 set.seed(123)
 (preBp_model <- train(
   y ~ ., 

@@ -7,9 +7,12 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
+
+
+
 # Prereqs 
 
-```{r slide-3}
+```{r slide-3, cache=TRUE}
 # Packages required
 library(rsample)
 library(caret)
@@ -32,7 +35,7 @@ library(pdp)
 
 
 
-```{r}
+```{r, cache=TRUE}
 #http://archive.ics.uci.edu/ml/datasets/Bank+Marketing
 
 #read the data set
@@ -40,29 +43,32 @@ bank <- read.csv2("data/bank-additional-full.csv", dec = ".")
 ```
 
 convert all characters to factors
-```{r}
+```{r, cache=TRUE}
 bank[sapply(bank, is.character)] <- lapply(bank[sapply(bank, is.character)], 
                                        as.factor)
 ```
 
 drop duration and nr.employed columns 
-```{r}
+```{r, cache=TRUE}
 bank <- select(bank, c (-duration, - nr.employed))
 ```
 
 convert all values in y into 0/1 in order to be accepted by xgboost
-```{r}
+```{r, cache=TRUE}
 bank$y <-  as.numeric(bank$y)-1
 ```
 
 take smaller train set to check if the training method works well
-```{r}
+```{r, cache=TRUE}
 set.seed(123) # for reproducibility
 split <- initial_split(bank, strata = "y", prop = 0.7)
 train <- training(split)
 
 ```
 
+```{r, cache=TRUE}
+names(bank)
+```
 
 #1
 Apply a basic GBM model with the same features you used in the random forest module.
@@ -70,10 +76,10 @@ Apply a basic GBM model with the same features you used in the random forest mod
 is true to apply 970 trees over all gbm and x and s??
 
 how can I calculate the error?? the accuracy for classification ?
-```{r slide-17}
+```{r slide-18, cache=TRUE}
 set.seed(123)
 bank_gbm <- gbm(
-  formula = y ~ ., # unclass(y)-1 is to transform the number into {0,1} for bernoulli
+  formula = y ~ ., 
   data = train,
   distribution = "bernoulli", # or bernoulli, multinomial, etc. 
   n.trees = 970, 
@@ -92,7 +98,7 @@ bank_gbm$cv.error[min_MSE]
 
 - Apply the default hyperparameter settings with a learning rate set to 0.10. 
 
-```{r slide-17}
+```{r slide-17, cache=TRUE}
 set.seed(123)
 bank_gbm_10 <- gbm(
   formula = y ~ .,
@@ -126,7 +132,7 @@ the gbm package comes with a default function called gbm.perf() to determine the
 we will also see two plots indicating the optimum number of trees based on the respective technique used. The graph on the left indicates the error on test (green line) and train data set (black line). The blue dotted line points the optimum number of iterations. One can also clearly observe that the beyond a certain a point (169 iterations for the “cv” method), the error on the test data appears to increase because of overfitting. Hence, our model will stop the training procedure on the given optimum number of iterations.
 
 the optimum number of iterations is 48 based on "cv"
-```{r slide-22}
+```{r slide-22, cache=TRUE}
 gbm.perf(bank_gbm_10, method = "cv") # or "OOB"
 ```
 - Was this enough to stabilize the loss function or do you need to add more?
@@ -150,7 +156,7 @@ gbm.perf(bank_gbm_10, method = "cv") # or "OOB"
 
 This model run takes ~2 mins 
 
-```{r slide-28}
+```{r slide-28, cache=TRUE}
 set.seed(123)
 bank_gbm1 <- gbm(
   formula = y ~ .,
@@ -171,7 +177,7 @@ min_MSE <- which.min(bank_gbm1$cv.error)
 
 gbm.perf(bank_gbm1, method = "cv")
 ```
-```{r slide-29}
+```{r slide-29, cache=TRUE}
 # search grid
 hyper_grid <- expand.grid(
   n.trees = 6000,
@@ -221,7 +227,7 @@ Apply a stochastic GBM model. Tune the hyperparameters using the suggested tunin
 - zoom in with a second round of tuning
 - smaller values will tell you that overfitting was occurring
 
-```{r slide-32}
+```{r slide-32, cache=TRUE}
 bag_frac <- c(.5, .65, .8) #<<
 
 for(i in bag_frac) {
@@ -262,7 +268,7 @@ Apply an XGBoost model. Tune the hyperparameters using the suggested tuning stra
    
 ___Pro tip: If you have I cardinality categorical features, label or ordinal encoding often improves performance and speed!___
 
-```{r slide-35}
+```{r slide-35, cache=TRUE}
 library(recipes)
 xgb_prep <- recipe(y ~ ., data = train) %>%
   step_other(all_nominal(), threshold = .005) %>%
@@ -283,7 +289,7 @@ Y <- xgb_prep$y
 
 ___This grid search takes ~20 secs___
 
-```{r slide-36}
+```{r slide-36, cache=TRUE}
 set.seed(123)
 bank_xgb <- xgb.cv(
   data = X,
@@ -314,7 +320,7 @@ ___This grid search takes ~1.5 min___
 
 How do we know that params = list(eta = .05) and what the results above ???
 what is nrounds = 6000,???
-```{r slide-37}
+```{r slide-37, cache=TRUE}
 set.seed(123)
 bank_xgb_eta <- xgb.cv(
   data = X,
@@ -345,7 +351,7 @@ bank_xgb_eta$evaluation_log %>% tail()
 ___This grid search takes ~30 min___
 
 
-```{r slide-38}
+```{r slide-38, cache=TRUE}
 # grid
 hyper_grid <- expand.grid(
   eta = .05,
@@ -393,12 +399,12 @@ arrange(hyper_grid, error)
 ___This grid search takes ~12 min___
 
 you have to put max_depth and min_child_weight from the previous output
-```{r slide-39}
+```{r slide-39, cache=TRUE}
 # grid
 hyper_grid <- expand.grid(
   eta = .05,
-  max_depth = 1, 
-  min_child_weight = 1,
+  max_depth = 7, 
+  min_child_weight = 9,
   subsample = c(.5, .65, .8, 1), #<<
   colsample_bytree = c(.5, .65, .8, 1), #<<
   error = 0 # a place to dump results
@@ -407,7 +413,7 @@ hyper_grid <- expand.grid(
 # grid search
 for(i in seq_len(nrow(hyper_grid))) {
   set.seed(123)
-  m <- xgb.cv(
+  mm_bank <- xgb.cv(
     data = X,
     label = Y,
     nrounds = 6000,
@@ -423,7 +429,7 @@ for(i in seq_len(nrow(hyper_grid))) {
       colsample_bytree = hyper_grid$colsample_bytree[i] #<<
     ) #<<
   )
-  hyper_grid$error[i] <- min(m$evaluation_log$test_error_mean)
+  hyper_grid$error[i] <- min(mm_bank$evaluation_log$test_error_mean)
 }
 
 arrange(hyper_grid, error)
@@ -446,13 +452,13 @@ arrange(hyper_grid, error)
 
 ___This grid search takes ~5 min___
 
-```{r slide-41}
+```{r slide-41, cache=TRUE}
 hyper_grid <- expand.grid(
   eta = .05,
-  max_depth = 3, 
-  min_child_weight = 3,
+  max_depth = 7, 
+  min_child_weight = 9,
   subsample = 1., 
-  colsample_bytree = 0.50,
+  colsample_bytree = 1,
   #gamma = c(1, 100, 1000, 10000),
   #lambda = c(1e-2, 0.1, 1, 100, 1000, 10000),
   alpha = c(1e-2, 0.1, 1, 100, 1000, 10000), #<<
@@ -462,7 +468,7 @@ hyper_grid <- expand.grid(
 # grid search
 for(i in seq_len(nrow(hyper_grid))) {
   set.seed(123)
-  m <- xgb.cv(
+  m_xgb <- xgb.cv(
     data = X,
     label = Y,
     nrounds = 6000,
@@ -481,7 +487,7 @@ for(i in seq_len(nrow(hyper_grid))) {
       alpha = hyper_grid$alpha[i] #<<
     ) 
   )
-  hyper_grid$error[i] <- min(m$evaluation_log$test_error_mean)
+  hyper_grid$error[i] <- min(m_xgb$evaluation_log$test_error_mean)
 }
 
 arrange(hyper_grid, error)
@@ -498,15 +504,15 @@ arrange(hyper_grid, error)
 
 ___`final_cv`] test RMSE: 20,581.31___
 
-```{r slide-42}
+```{r slide-42, cache=TRUE}
 # parameter list
 params <- list(
   eta = .05,
-  max_depth = 3, 
-  min_child_weight = 3,
-  subsample = .8, 
+  max_depth = 7, 
+  min_child_weight = 9,
+  subsample = 1, 
   colsample_bytree = 1,
-  alpha = 100
+  alpha = 1e-02
 )
 
 # final cv fit
@@ -541,7 +547,7 @@ bank_final_xgb <- xgboost(
 #4
 Pick your best GBM model. 
 
-```{r slide-44}
+```{r slide-44, cache=TRUE}
 vip::vip(bank_final_xgb, num_features = 25)
 ```
 
@@ -557,10 +563,10 @@ vip::vip(bank_final_xgb, num_features = 25)
 Create partial dependence plots for the top two most influential features.
 # Feature Effects (PDP)
 
-```{r slide-45a}
+```{r slide-45a, cache=TRUE}
 bank_final_xgb %>%
   partial(
-    pred.var = "pdays", 
+    pred.var = "euribor3m", 
     n.trees = bank_final_xgb$niter, 
     grid.resolution = 50, 
     train = X
@@ -570,10 +576,10 @@ bank_final_xgb %>%
 
 # Feature Effects (ICE)
 
-```{r slide-45b}
+```{r slide-45b, cache=TRUE}
 bank_final_xgb %>%
   partial(
-    pred.var = "pdays", 
+    pred.var = "month", 
     n.trees = bank_final_xgb$niter, 
     grid.resolution = 50, 
     train = X,
@@ -587,6 +593,6 @@ bank_final_xgb %>%
 
 
 ```{r}
-save.image("myWorkspace_ex4.rds")
+#save.image("myWorkspace_ex4.rds")
 ```
 
