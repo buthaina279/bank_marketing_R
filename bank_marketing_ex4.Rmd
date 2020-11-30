@@ -230,16 +230,16 @@ for(i in bag_frac) {
     formula = y ~ .,
     data = train,
     distribution = "bernoulli",
-    n.trees = 5000, 
+    n.trees = 6000, 
     shrinkage = 0.01, 
     interaction.depth = 7, 
-    n.minobsinnode = 5,
+    n.minobsinnode = 10,
     bag.fraction = i, #<<
     cv.folds = 10 
     )
   # compute RMSE
   #print(sqrt(min(m$cv.error)))
-  print(min(m$cv.error))
+  print(min(m_bank$cv.error))
 }
 ```
 
@@ -288,7 +288,7 @@ set.seed(123)
 bank_xgb <- xgb.cv(
   data = X,
   label = Y,
-  nrounds = 5000,
+  nrounds = 6000,
   objective = "binary:logistic",
   early_stopping_rounds = 50, 
   nfold = 10,
@@ -319,7 +319,7 @@ set.seed(123)
 bank_xgb_eta <- xgb.cv(
   data = X,
   label = Y,
-  nrounds = 970,
+  nrounds = 6000,
   objective = "binary:logistic",
   early_stopping_rounds = 50, 
   nfold = 10,
@@ -360,7 +360,7 @@ for(i in seq_len(nrow(hyper_grid))) {
   m <- xgb.cv(
     data = X,
     label = Y,
-    nrounds = 970,
+    nrounds = 6000,
     objective = "binary:logistic",
     early_stopping_rounds = 50, 
     nfold = 10,
@@ -397,8 +397,8 @@ you have to put max_depth and min_child_weight from the previous output
 # grid
 hyper_grid <- expand.grid(
   eta = .05,
-  max_depth = 3, 
-  min_child_weight = 3,
+  max_depth = 1, 
+  min_child_weight = 1,
   subsample = c(.5, .65, .8, 1), #<<
   colsample_bytree = c(.5, .65, .8, 1), #<<
   error = 0 # a place to dump results
@@ -410,7 +410,7 @@ for(i in seq_len(nrow(hyper_grid))) {
   m <- xgb.cv(
     data = X,
     label = Y,
-    nrounds = 970,
+    nrounds = 6000,
     objective = "binary:logistic",
     early_stopping_rounds = 50, 
     nfold = 10,
@@ -451,8 +451,8 @@ hyper_grid <- expand.grid(
   eta = .05,
   max_depth = 3, 
   min_child_weight = 3,
-  subsample = .8, 
-  colsample_bytree = 1,
+  subsample = 1., 
+  colsample_bytree = 0.50,
   #gamma = c(1, 100, 1000, 10000),
   #lambda = c(1e-2, 0.1, 1, 100, 1000, 10000),
   alpha = c(1e-2, 0.1, 1, 100, 1000, 10000), #<<
@@ -465,7 +465,7 @@ for(i in seq_len(nrow(hyper_grid))) {
   m <- xgb.cv(
     data = X,
     label = Y,
-    nrounds = 970,
+    nrounds = 6000,
     objective = "binary:logistic",
     early_stopping_rounds = 50, 
     nfold = 10,
@@ -514,7 +514,7 @@ set.seed(123)
 final_cv <- xgb.cv(
   data = X,
   label = Y,
-  nrounds = 970,
+  nrounds = 6000,
   objective = "binary:logistic",
   early_stopping_rounds = 50, 
   nfold = 10,

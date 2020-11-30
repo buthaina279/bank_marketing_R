@@ -16,18 +16,11 @@ library(h2o)
 ```
 
 ```{r}
-h2o.init(nthreads = -1, max_mem_size = '2g', ip = "127.0.0.1", port = 50001)
-```
-
-
-```{r}
-h2o.init()
-```
-
-```{r}
 h2o.init(max_mem_size = "5g")
-
 ```
+
+
+
 
 
 ```{r}
