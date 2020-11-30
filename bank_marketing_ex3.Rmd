@@ -371,11 +371,11 @@ last
 
 
 ```{r}
-save.image("myWorkspace_ex3_1.rds")
+save.image("myWorkspace_ex3.rds")
 ```
 
 ```{r}
-#load("myWorkspace_ex3.rds")
+load("myWorkspace_ex3.rds")
 ```
 
 

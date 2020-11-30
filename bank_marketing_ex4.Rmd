@@ -98,10 +98,10 @@ bank_gbm_10 <- gbm(
   formula = y ~ .,
   data = train,
   distribution = "bernoulli", # or bernoulli, multinomial, etc. 
-  n.trees = 970, 
+  n.trees = 5000, 
   shrinkage = 0.10, 
   interaction.depth = 1, 
-  n.minobsinnode = 5, 
+  n.minobsinnode = 10, 
   cv.folds = 5 
   )  
 
@@ -156,7 +156,7 @@ bank_gbm1 <- gbm(
   formula = y ~ .,
   data = train,
   distribution = "bernoulli", # or bernoulli, multinomial, etc. #<<
-  n.trees = 970, #<<
+  n.trees = 5000, #<<
   shrinkage = 0.01, #<<
   interaction.depth = 3, #<<
   n.minobsinnode = 10, #<<
@@ -171,7 +171,43 @@ min_MSE <- which.min(bank_gbm1$cv.error)
 
 gbm.perf(bank_gbm1, method = "cv")
 ```
+```{r slide-29}
+# search grid
+hyper_grid <- expand.grid(
+  n.trees = 6000,
+  shrinkage = .01,
+  interaction.depth = c(3, 5, 7), #<<
+  n.minobsinnode = c(5, 10, 15) #<<
+)
 
+model_fit <- function(n.trees, shrinkage, interaction.depth, n.minobsinnode) {
+  set.seed(123)
+  m <- gbm(
+    formula = y ~ .,
+    data = train,
+    distribution = "bernoulli",
+    n.trees = n.trees,
+    shrinkage = shrinkage, #<<
+    interaction.depth = interaction.depth, #<<
+    n.minobsinnode = n.minobsinnode,
+    cv.folds = 10
+  )
+  # compute RMSE
+  min(m$cv.error)
+}
+
+hyper_grid$error <- pmap_dbl(
+  hyper_grid,
+  ~ model_fit(
+    n.trees = ..1,
+    shrinkage = ..2,
+    interaction.depth = ..3,
+    n.minobsinnode = ..4
+    )
+)
+
+arrange(hyper_grid, error)
+```
 
 -Did your model performance improve?
 
@@ -190,11 +226,11 @@ bag_frac <- c(.5, .65, .8) #<<
 
 for(i in bag_frac) {
   set.seed(123)
-  m <- gbm(
+  m_bank <- gbm(
     formula = y ~ .,
     data = train,
     distribution = "bernoulli",
-    n.trees = 970, 
+    n.trees = 5000, 
     shrinkage = 0.01, 
     interaction.depth = 7, 
     n.minobsinnode = 5,
@@ -252,7 +288,7 @@ set.seed(123)
 bank_xgb <- xgb.cv(
   data = X,
   label = Y,
-  nrounds = 970,
+  nrounds = 5000,
   objective = "binary:logistic",
   early_stopping_rounds = 50, 
   nfold = 10,
@@ -549,4 +585,8 @@ bank_final_xgb %>%
 - Explain the relationship between the feature and the predicted values.
 
 
+
+```{r}
+save.image("myWorkspace_ex4.rds")
+```
 
