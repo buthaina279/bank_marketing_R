@@ -69,7 +69,8 @@ blueprint <- recipe(y ~ ., data = train) %>%
   step_nzv(all_nominal()) %>%
   step_center(all_numeric(), -all_outcomes()) %>%
   step_scale(all_numeric(), -all_outcomes()) %>%
-   step_dummy(all_nominal(), -all_outcomes(), one_hot = TRUE)
+   step_dummy(all_nominal(), -all_outcomes(), one_hot = TRUE) %>% 
+   step_pca(all_numeric(), -all_outcomes())
   #step_integer(all_nominal()) %>%
 ```
 
@@ -128,36 +129,16 @@ Perform a grid search over several components.
 *****this should not work just to make sure try and test it 
 ```{r}
 
-cv <- trainControl(
-  method = "repeatedcv", 
-  number = 10, 
-  repeats = 5
-  )
 
-hyper_grid_p <- expand.grid(ncomp = seq(2, 10, by = 2))
-
-
-# PLS
-set.seed(123)
-cv_pls <- train(
-  blueprint,
-  data = train, 
-  trControl = cv,
-  method = "pls", #<<
-  tuneGrid = hyper_grid_p
-  )
-
-# model with lowest RMSE
-cv_pls$bestTune
-
-cv_pls$results %>%
-  filter(ncomp == as.numeric(cv_pls$bestTune))
-
-# plot cross-validated RMSE
-plot(cv_pls)
 ```
 
 Identify and explain the performance of the optimal model.
+
+
+
+```{r}
+#load("myWorkspace_ex2.rds")
+```
 
 
 ##4

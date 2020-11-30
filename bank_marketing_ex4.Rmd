@@ -58,7 +58,7 @@ bank$y <-  as.numeric(bank$y)-1
 take smaller train set to check if the training method works well
 ```{r}
 set.seed(123) # for reproducibility
-split <- initial_split(bank, strata = "y", prop = 0.025)
+split <- initial_split(bank, strata = "y", prop = 0.7)
 train <- training(split)
 
 ```
