@@ -1,6 +1,11 @@
 ---
 title: "bank_marketing_ex4_2"
-output: html_document
+author: "*Buthaina Alshareef*"
+date: "*01-12-2020*"
+output:
+  html_document:
+   toc: true
+   toc_float: true
 ---
 
 ```{r setup, include=FALSE}
@@ -13,6 +18,16 @@ knitr::opts_chunk$set(echo = TRUE)
 ```{r}
 library(recipes)
 library(h2o)
+# Packages required
+library(rsample)
+library(caret)
+library(tidyverse)
+library(inspectdf) 
+library(ISLR)
+library(dplyr)
+library(ggplot2)
+library(psych)
+
 ```
 
 ```{r}
@@ -33,7 +48,7 @@ bank <- read.csv2("data/bank-additional-full.csv", dec = ".")
 convert all characters to factors
 ```{r}
 bank[sapply(bank, is.character)] <- lapply(bank[sapply(bank, is.character)], 
-                                       as.factor)
+                                           as.factor)
 ```
 
 drop duration and nr.employed columns 
@@ -41,10 +56,10 @@ drop duration and nr.employed columns
 bank <- select(bank, c (-duration, - nr.employed))
 ```
 
-take smaller train set to check if the training method works well
+take 70% train set to check if the training method works well
 ```{r}
 set.seed(123) # for reproducibility
-split <- initial_split(bank, strata = "y", prop = 0.025)
+split <- initial_split(bank, strata = "y", prop = 0.7)
 train <- training(split)
 test <- testing(split)
 
@@ -77,47 +92,36 @@ X <- setdiff(names(train), Y)
 #6
 
 Using H2O, build and assess the following individual models:
-- regularized regression base learner,
 - random forest base learner.
 - GBM and/or XGBoost base learner.
 
-```{r slide-12}
-# Train & Cross-validate a GLM model
-best_glm <- h2o.glm(
-  x = X,
-  y = Y,
-  training_frame = train_h2o,
-  alpha = .1,
-  remove_collinear_columns = TRUE,
-  nfolds = 10, 
-  fold_assignment = "Modulo", 
-  keep_cross_validation_predictions = TRUE, 
-  seed = 123
-  )
 
-h2o.rmse(best_glm, xval = TRUE)
-
-# Train & Cross-validate a RF model
+```{r}
 best_rf <- h2o.randomForest(
   x = X,
   y = Y,
-  training_frame = train_h2o,
-  ntrees = 1000,
-  mtries = 20,
-  max_depth = 30,
-  min_rows = 1,
-  sample_rate = 0.8,
+  training_frame = train_h2o, 
+  ntree = 100, 
+  mtries = 2,
+  nbins = 50,
+  sample_rate = 0.95,
+  keep_cross_validation_predictions = T,
+  binomial_double_trees = F,
+  fold_assignment = "Modulo",
   nfolds = 10, 
-  fold_assignment = "Modulo", 
-  keep_cross_validation_predictions = TRUE, 
-  seed = 123,
-  stopping_rounds = 50,
-  stopping_metric = "RMSE",
-  stopping_tolerance = 0
-  )
+  min_rows = 200,
+  balance_classes = T,
+  max_depth = 12)
 
-h2o.rmse(best_rf, xval = TRUE)
 
+best_rf
+
+#best_rf@model$training_metrics@metrics$Gini
+
+```
+
+
+```{r slide-133}
 # Train & Cross-validate a GBM model
 best_gbm <- h2o.gbm(
   x = X,
@@ -133,33 +137,40 @@ best_gbm <- h2o.gbm(
   keep_cross_validation_predictions = TRUE, 
   seed = 123,
   stopping_rounds = 50,
-  stopping_metric = "RMSE",
-  stopping_tolerance = 0
-  )
-
-h2o.rmse(best_gbm, xval = TRUE)
-
-# Train & Cross-validate an XGBoost model
-best_xgb <- h2o.xgboost(
-  x = X,
-  y = Y,
-  training_frame = train_h2o,
-  ntrees = 5000,
-  learn_rate = 0.05,
-  max_depth = 3,
-  min_rows = 3,
-  sample_rate = 0.8,
-  categorical_encoding = "Enum",
-  nfolds = 10,
-  fold_assignment = "Modulo", 
-  keep_cross_validation_predictions = TRUE, 
-  seed = 123,
-  stopping_rounds = 50,
-  stopping_metric = "RMSE",
-  stopping_tolerance = 0
+  stopping_metric = "AUTO",
+  stopping_tolerance = 0,
+  categorical_encoding = "Binary"
 )
 
-h2o.rmse(best_xgb, xval = TRUE)
+best_gbm
+```
+
+
+```{r slide-133}
+# to save time I will ignore this
+
+# Train & Cross-validate an XGBoost model
+# best_xgb <- h2o.xgboost(
+#   x = X,
+#   y = Y,
+#   training_frame = train_h2o,
+#   ntrees = 5000,
+#   learn_rate = 0.05,
+#   max_depth = 3,
+#   min_rows = 3,
+#   sample_rate = 0.8,
+#   categorical_encoding = "Binary",
+#   nfolds = 10,
+#   fold_assignment = "Modulo",
+#   keep_cross_validation_predictions = TRUE,
+#   seed = 123,
+#   stopping_rounds = 50,
+#   stopping_metric = "AUTO",
+#   stopping_tolerance = 0
+# )
+# 
+# #h2o.rmse(best_xgb, xval = TRUE)
+# best_xgb
 ```
 
 
@@ -175,37 +186,42 @@ ensemble_tree <- h2o.stackedEnsemble(
   y = Y,
   training_frame = train_h2o,
   model_id = "my_tree_ensemble",
-  base_models = list(best_glm, best_rf, best_gbm, best_xgb),
-  metalearner_algorithm = "drf"
-  )
+  base_models = list(best_rf, best_gbm),
+  metalearner_algorithm = "gbm"
+)
+ensemble_tree
 ```
 
+
+
+
 ```{r slide-14a}
-# base learners
-get_rmse <- function(model) {
-  results <- h2o.performance(model, newdata = test_h2o)
-  results@metrics$RMSE
-}
-list(best_glm, best_rf, best_gbm, best_xgb) %>%
-  purrr::map_dbl(get_rmse)
+per_rf <- h2o.performance(best_rf, newdata = test_h2o)
+  arrange(h2o.accuracy(per_rf))
+```
+
+
+```{r}
+per_gbm <- h2o.performance(best_gbm, newdata = test_h2o)
+  arrange(h2o.accuracy(per_gbm))
+```
+
+
+```{r }
+# per_xgb <- h2o.performance(best_xgb, newdata = test_h2o)
+#   arrange(h2o.accuracy(per_xgb))
+```
+
+
+```{r }
 
 # stacked glm
 results_tree <- h2o.performance(ensemble_tree, newdata = test_h2o)
-results_tree@metrics$RMSE
+  arrange(h2o.accuracy(results_tree))
 ```
 
 
-We're restricted on how much improvement stacking will make due to highly correlated predictions
 
-```{r slide-14b}
-data.frame(
-  GLM_pred = as.vector(h2o.getFrame(best_glm@model$cross_validation_holdout_predictions_frame_id$name)),
-  RF_pred = as.vector(h2o.getFrame(best_rf@model$cross_validation_holdout_predictions_frame_id$name)),
-  GBM_pred = as.vector(h2o.getFrame(best_gbm@model$cross_validation_holdout_predictions_frame_id$name)),
-  XGB_pred = as.vector(h2o.getFrame(best_xgb@model$cross_validation_holdout_predictions_frame_id$name))
-  ) %>%
-  cor()
-```
 
 #7
 Perform a stacked grid search with an H2O GBM or XGBoost model.
@@ -222,13 +238,19 @@ hyper_grid <- list(
   sample_rate = c(.5, .75, 1),
   col_sample_rate = c(.8, .9, 1)
 )
+```
 
+
+```{r slide-16}
 # random grid search criteria
 search_criteria <- list(
   strategy = "RandomDiscrete",
   max_models = 25
-  )
+)
+```
 
+
+```{r slide-16}
 # build random grid search 
 random_grid <- h2o.grid(
   algorithm = "gbm",
@@ -239,20 +261,23 @@ random_grid <- h2o.grid(
   hyper_params = hyper_grid,
   search_criteria = search_criteria,
   ntrees = 5000,
-  stopping_metric = "RMSE",     
-  stopping_rounds = 10,         
+  stopping_metric = "AUTO",
+  stopping_rounds = 10,
   stopping_tolerance = 0,
   nfolds = 10,
   fold_assignment = "Modulo",
   keep_cross_validation_predictions = TRUE,
   seed = 123
-  )
+)
+```
 
+
+```{r slide-16}
 # collect the results and sort by our model performance metric of choice
 random_grid_perf <- h2o.getGrid(
   grid_id = "gbm_grid", 
-  sort_by = "rmse"
-  )
+  sort_by = "accuracy"
+)
 random_grid_perf
 ```
 
@@ -276,7 +301,7 @@ ensemble <- h2o.stackedEnsemble(
   model_id = "ensemble_gbm_grid",
   base_models = random_grid@model_ids,
   metalearner_algorithm = "gbm"
-  )
+)
 
 # Eval ensemble performance on a test set
 h2o.performance(ensemble, newdata = test_h2o)
@@ -286,7 +311,7 @@ h2o.performance(ensemble, newdata = test_h2o)
 #8
 Perform an AutoML search across multiple types of learners.
 
-   
+
 ```{r slide-21}
 auto_ml <- h2o.automl(
   x = X,
@@ -295,10 +320,10 @@ auto_ml <- h2o.automl(
   nfolds = 5,
   max_runtime_secs = 60*120, # 2 hours!
   keep_cross_validation_predictions = TRUE,
-  sort_metric = "RMSE",
+  sort_metric = "AUC",
   seed = 123,
   stopping_rounds = 50,
-  stopping_metric = "RMSE",
+  stopping_metric = "misclassification",
   stopping_tolerance = 0
 )
 
@@ -306,8 +331,20 @@ auto_ml <- h2o.automl(
 # get top model: auto_ml@leader
 auto_ml@leaderboard %>% as.data.frame()
 ```
-   
-   
+
+
+
+
 - Which types of base learners are in the top 10?
 - What model provides the optimal performance?
 - Apply this model to the test set. How does the test loss function compare to the training cross-validated RMSE?
+
+
+```{r}
+save.image("myWorkspace_ex4_22.rds")
+```
+
+
+```{r}
+load("myWorkspace_ex4_22.rds")
+```

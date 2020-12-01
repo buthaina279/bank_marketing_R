@@ -1,6 +1,11 @@
 ---
 title: "bank_marketin_ex2"
-output: html_document
+author: "*Buthaina Alshareef*"
+date: "*01-12-2020*"
+output:
+  html_document:
+   toc: true
+   toc_float: true
 ---
 
 ```{r setup, include=FALSE}
@@ -43,25 +48,15 @@ drop duration and nr.employed columns
 bank <- select(bank, c (-duration, - nr.employed))
 ```
 
-take smaller train set to check if the training method works well
+take 70% train set to check if the training method works well
 ```{r}
 set.seed(123) # for reproducibility
-split <- initial_split(bank, strata = "y", prop = 0.025)
+split <- initial_split(bank, strata = "y", prop = 0.7)
 train <- training(split)
 
 ```
 
-```{r}
 
-cv <- trainControl(
-  method = "repeatedcv", 
-  number = 10, 
-  repeats = 5
-  )
-
-# 4. create a hyperparameter grid search
-hyper_grid <- expand.grid(k = seq(2, 8, by = 2))
-```
 
 Create and a apply a blueprint of feature engineering processes that you think will help your model improve.
 ```{r}
@@ -82,7 +77,6 @@ Depending on the type of response variable, apply a linear or logistic regressio
 
 First, apply the model to your data without pre-applying feature engineering processes.
 
-** multicliniarity check ho to solve it ???
 ```{r, cache=TRUE}
 set.seed(123)
 (preBp_model <- train(
@@ -112,47 +106,34 @@ set.seed(123)
 
 
 Did your model performance improve?
+yes from 0.9004575 to 0.8953244 
+
+
 
 
 ##2
-Apply a principal component regression model.
-Perform a grid search over several components.
-Identify and explain the performance of the optimal model.
-
-principal component regression model is not applicable for classification tasks!
+- Apply a principal component regression model.
+   it is not applicable for classification tasks!
 
 
 ##3
-Apply a partial least squares regression model.
-Perform a grid search over several components.
+- Apply a partial least squares regression model.
+    it is not applicable for classification tasks!
 
-*****this should not work just to make sure try and test it 
+
+##4
+
+- Apply a regularized regression model.
+   it is not applicable for classification tasks!
+
 ```{r}
-
-
+#save.image("myWorkspace_ex2.rds")
 ```
-
-Identify and explain the performance of the optimal model.
-
 
 
 ```{r}
 #load("myWorkspace_ex2.rds")
 ```
-
-
-##4
-
-Apply a regularized regression model.
-Perform a grid search across alpha parameter values ranging between 0–1.
-
-regularized regression model can not be applied in classification tasks!
-
-What is the optimal alpha and lambda values?
-What is the MSE and RMSE for this optimal model?
-How does it compare to your previous models?
-
-
 
 
 

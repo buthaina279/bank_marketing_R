@@ -1,6 +1,11 @@
 ---
 title: "bank_marketing_ex3"
-output: html_document
+author: "*Buthaina Alshareef*"
+date: "*01-12-2020*"
+output:
+  html_document:
+   toc: true
+   toc_float: true
 ---
 
 ```{r setup, include=FALSE}
@@ -44,7 +49,7 @@ head(bank)
 ```
 
 
-take the 70% train dats set 
+take the 70% train data set 
 
 ```{r}
 set.seed(123) # for reproducibility
@@ -54,13 +59,7 @@ test  <- testing(split)
 
 ```
 
-take smaller train set to check if the training method works well
-```{r}
-set.seed(123) # for reproducibility
-split <- initial_split(bank, strata = "y", prop = 0.025)
-train <- training(split)
-
-```
+#MARS
 
 MARS is not applicable for classification problems, therefore, we are going to use Random Forest
 
@@ -106,10 +105,6 @@ What we do next should be driven by attributes of our data:
 - 8 variables are numeric
 - 12 categorical variables with moderate number of levels
 
-
-is the data unbalanced ??
-feature engineering or design the tree 
-without replacment
 
 ```{r slide-52a}
   train %>%
@@ -159,7 +154,7 @@ But before we tune, do we have enough trees
 
 - Some pkgs provide OOB error for each tree
 - __ranger__ only provides overall OOB
-- from this chunk we can know the number of trees with the lowest number of RMSE
+- from this chunk we can know the number of trees with the lowest number of error
 
 ```{r slide-53a}
 # number of features
@@ -193,7 +188,7 @@ data.frame(trees, error) %>%
   arrange(error)
 ```
 
-- the best number of trees is 970 trees with 0.3163265 rmse
+- the best number of trees is 970 trees with 0.3163265 error
 
 - using $p \times 10 = 180$ trees is sufficient
 - may increase if we decrease mtry or sample size
@@ -230,10 +225,6 @@ head(hyper_grid)
 
 Grid search execution
 
-- This search grid took ~2.5 minutes
-- __caret__ provides grid search 
-- For larger data, use __H2O__'s random grid search with early stopping 
-
 ```{r slide-54b}
 for(i in seq_len(nrow(hyper_grid))) {
   
@@ -261,18 +252,12 @@ for(i in seq_len(nrow(hyper_grid))) {
 
 Our top 10 models:
 
-- have ~1% or higher performance improvement over the default model????????
 - sample w/o replacement
-- primarily include higher sampling????????
-- primarily use mtry = 20 or 26??????
-- node size appears non-influential???????
+- primarily use mtry = 2
+- min.node.size = 5
+- sample fraction = 0.80
+- error = 0.3116317	
 
-I would follow this up with an additional grid search that focuses on:
-
-- mtry values around 0,2,4,7
-- sample fraction around 50%, 63%
-
-_using too high of sampling fraction without replacement runs the risk of overfitting to your training data!_
 
 ```{r slide-55}
 default_error <- sqrt(fit_default$prediction.error)
@@ -350,7 +335,6 @@ euribor3m_ICE
 
 
 Interaction between two influential variables:
-what is the point from this ?????? yes 
 
 ```{r slide-61}
 last <- fit_final %>%
@@ -375,7 +359,7 @@ save.image("myWorkspace_ex3.rds")
 ```
 
 ```{r}
-load("myWorkspace_ex3.rds")
+load("myWorkspace_ex3_1.rds")
 ```
 
 

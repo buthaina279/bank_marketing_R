@@ -1,6 +1,11 @@
 ---
 title: "bank_marketing_ex4"
-output: html_document
+author: "*Buthaina Alshareef*"
+date: "*01-12-2020*"
+output:
+  html_document:
+   toc: true
+   toc_float: true
 ---
 
 ```{r setup, include=FALSE}
@@ -73,9 +78,7 @@ names(bank)
 #1
 Apply a basic GBM model with the same features you used in the random forest module.
 
-is true to apply 970 trees over all gbm and x and s??
 
-how can I calculate the error?? the accuracy for classification ?
 ```{r slide-18, cache=TRUE}
 set.seed(123)
 bank_gbm <- gbm(
@@ -90,10 +93,7 @@ bank_gbm <- gbm(
   )  
 
 # find index for n trees with minimum CV error
-min_MSE <- which.min(bank_gbm$cv.error)
-min_MSE
-# get MSE and compute RMSE
-bank_gbm$cv.error[min_MSE]
+print(min(bank_gbm$cv.error))
 ```
 
 - Apply the default hyperparameter settings with a learning rate set to 0.10. 
@@ -114,28 +114,28 @@ bank_gbm_10 <- gbm(
 # find index for n trees with minimum CV error
 min_MSE <- which.min(bank_gbm_10$cv.error)
 
-# get MSE and compute RMSE
-#sqrt(bank_gbm_10$cv.error[min_MSE])
 
-print(bank_gbm_10)
+print(min(bank_gbm_10$cv.error))
 
 ```
 - How does model performance compare to the random forest module?
 
+the performance is better because when we increased the number of trees to 5000 and with 0.10 learning rate, the error down from 0.5492983 to 0.5461762
+
+
 - How many trees were applied? 
-970 trees
+5000 trees
 
-Use CV or OOB
-
-the gbm package comes with a default function called gbm.perf() to determine the optimum number of iterations. 
 
 we will also see two plots indicating the optimum number of trees based on the respective technique used. The graph on the left indicates the error on test (green line) and train data set (black line). The blue dotted line points the optimum number of iterations. One can also clearly observe that the beyond a certain a point (169 iterations for the “cv” method), the error on the test data appears to increase because of overfitting. Hence, our model will stop the training procedure on the given optimum number of iterations.
 
-the optimum number of iterations is 48 based on "cv"
+the optimum number of iterations is 4799 based on "cv"
 ```{r slide-22, cache=TRUE}
 gbm.perf(bank_gbm_10, method = "cv") # or "OOB"
 ```
 - Was this enough to stabilize the loss function or do you need to add more?
+almost all the trees was used so we are going to increase the number of trees to be 6000 tree
+
 
 - Tune the hyperparameters using the suggested tuning strategy for basic GBMs. 
 
@@ -146,37 +146,7 @@ gbm.perf(bank_gbm_10, method = "cv") # or "OOB"
     - default min obs
 2. set our learning rate at .01
 3. increase CV to ensure unbiased error estimate
-4. Results
-   - Lowest error rate yet ($21,914.55)!
-   - Used nearly all our trees --> increase to 6000?
-   - took ~ 2.25 min
-5. Compared to learning rate of .001
-   - error rate of $24,791.66
-   - took ~ 4 min
 
-This model run takes ~2 mins 
-
-```{r slide-28, cache=TRUE}
-set.seed(123)
-bank_gbm1 <- gbm(
-  formula = y ~ .,
-  data = train,
-  distribution = "bernoulli", # or bernoulli, multinomial, etc. #<<
-  n.trees = 5000, #<<
-  shrinkage = 0.01, #<<
-  interaction.depth = 3, #<<
-  n.minobsinnode = 10, #<<
-  cv.folds = 10 #<<
-  )
-
-# find index for n trees with minimum CV error
-min_MSE <- which.min(bank_gbm1$cv.error)
-
-# get MSE and compute RMSE
-#sqrt(bank_gbm1$cv.error[min_MSE])
-
-gbm.perf(bank_gbm1, method = "cv")
-```
 ```{r slide-29, cache=TRUE}
 # search grid
 hyper_grid <- expand.grid(
@@ -217,9 +187,14 @@ arrange(hyper_grid, error)
 
 -Did your model performance improve?
 
+yes, Lowest error rate yet (0.5393553)
+Used all of our trees (6000)
+
 
 #2
-Apply a stochastic GBM model. Tune the hyperparameters using the suggested tuning strategy for stochastic GBMs. 
+Apply a stochastic GBM model. 
+
+Tune the hyperparameters using the suggested tuning strategy for stochastic GBMs. 
 
 # Applying a Stochastic GBM
 
@@ -243,20 +218,22 @@ for(i in bag_frac) {
     bag.fraction = i, #<<
     cv.folds = 10 
     )
-  # compute RMSE
-  #print(sqrt(min(m$cv.error)))
+ 
+  
   print(min(m_bank$cv.error))
 }
 ```
 
 - Did your model performance improve?
-
+yes, Lowest error rate yet (0.5380045) 
 
 
 
 
 #3
-Apply an XGBoost model. Tune the hyperparameters using the suggested tuning strategy for XGBoost models.
+Apply an XGBoost model. 
+
+Tune the hyperparameters using the suggested tuning strategy for XGBoost models.
 
 # Prereqs
 
@@ -283,11 +260,11 @@ Y <- xgb_prep$y
 # First XGBoost model 
 
 * `nrounds`: 6,000 trees 
-* `objective`: `reg:linear` for regression but other options exist (i.e. `reg:logistic`, `binary:logistic`, `num_class`)
+* `objective`: `binary:logistic` for classification 
 * `early_stopping_rounds`: stop training if CV RMSE doesn't improve for 50 trees in a row 
 * `nfold`: 10-fold CV 
+the performance becomes 0.0989527
 
-___This grid search takes ~20 secs___
 
 ```{r slide-36, cache=TRUE}
 set.seed(123)
@@ -308,18 +285,9 @@ bank_xgb$evaluation_log %>% tail()
 # Tuning 
 
 1. ___Crank up the trees and tune learning rate with early stopping___
-   - initial test RMSE results:
-   - .red[`eta = .3` (default): 24,382 w/200 trees (< 1 min)]
-   - .red[`eta = .1`: 22,333 w/398 trees (< 1 min)]
-   - .green[`eta = .05`: 21,877 w/978 trees (1.5 min)]
-   - .red[`eta = .01`: 22,094 w/2843 trees (4 min)]
    
-As a comparison, if you one-hot encoded the feature set it takes 30 mins to run with `eta = .01`!
-
-___This grid search takes ~1.5 min___
-
-How do we know that params = list(eta = .05) and what the results above ???
-what is nrounds = 6000,???
+   `eta = .05`: 0.0975651 with 6000 trees 
+  
 ```{r slide-37, cache=TRUE}
 set.seed(123)
 bank_xgb_eta <- xgb.cv(
@@ -344,12 +312,9 @@ bank_xgb_eta$evaluation_log %>% tail()
    - instances required to make additional split
 
 * Preferred values: 
-   - `max_depth` = 3
-   - `min_child_weight` = 3
-   - RMSE = 20989.27
-
-___This grid search takes ~30 min___
-
+   - `max_depth` = 7
+   - `min_child_weight` = 9
+   - error = 0.0966287	
 
 ```{r slide-38, cache=TRUE}
 # grid
@@ -392,13 +357,10 @@ arrange(hyper_grid, error)
    - subsampling columns for each tree 
 
 * Preferred values: 
-   - `subsample` = 0.80
-   - `colsample_bytree` = 1
-   - RMSE = 20732.22
+   - `subsample` = 1.00	
+   - `colsample_bytree` = 1.00	
+   - error = 0.0966287
 
-___This grid search takes ~12 min___
-
-you have to put max_depth and min_child_weight from the previous output
 ```{r slide-39, cache=TRUE}
 # grid
 hyper_grid <- expand.grid(
@@ -442,15 +404,12 @@ arrange(hyper_grid, error)
 2. Tune tree-specific hyperparameters
 3. Add stochastic attributes with
 4. ___See if adding regularization helps___
-   - gamma: tested 1, 100, 1000, 10000 -- no effect
-   - lambda: tested 0.001, 0.01, 0.1, 1, 100, 1000 -- no effect
    - alpha: tested 0.001, 0.01, 0.1, 1, 100, 1000 -- minor improvement
 
 * Preferred value:
    - `alpha` = 100
-   - RMSE = 20581.31
+   - error = 0.0966633
 
-___This grid search takes ~5 min___
 
 ```{r slide-41, cache=TRUE}
 hyper_grid <- expand.grid(
@@ -502,7 +461,7 @@ arrange(hyper_grid, error)
 5. If you find hyperparameter values that are substantially different from default settings, be sure to assess the learning rate again
 6. ___Rerun final "optimal" model with `xgb.cv()` to get iterations required and then with `xgboost()` to produce final model___
 
-___`final_cv`] test RMSE: 20,581.31___
+___`final_cv`] test error: 0.093299___
 
 ```{r slide-42, cache=TRUE}
 # parameter list
@@ -537,12 +496,16 @@ bank_final_xgb <- xgboost(
   params = params, #<<
   verbose = 0
 )
+
+bank_final_xgb
 ```
 
 
 - Did your model performance improve?
-
+yes, error = 0.093299	
 - Did regularization help?
+yes 
+
 
 #4
 Pick your best GBM model. 
@@ -553,10 +516,20 @@ vip::vip(bank_final_xgb, num_features = 25)
 
 - Which 10 features are considered most influential? 
 
+    1- euribor3m
+    2- month
+    3- pdays
+    4- poutcome
+    5- age
+    6- day_of_week
+    7- cons.price.idx
+    8- contact
+    9- campaign
+    10- cons.conf.idx
+    
+
 - Are these the same features that have been influential in previous models?
-
-
-
+no they are different
 
 #5
 
@@ -588,11 +561,15 @@ bank_final_xgb %>%
   autoplot(rug = TRUE, train = X, alpha = .05, center = TRUE) 
 ```
 
-- Explain the relationship between the feature and the predicted values.
-
 
 
 ```{r}
 #save.image("myWorkspace_ex4.rds")
 ```
+
+
+```{r}
+load("myWorkspace_ex4.rds")
+```
+
 
