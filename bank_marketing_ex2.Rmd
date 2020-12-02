@@ -1,7 +1,7 @@
 ---
-title: "bank_marketin_ex2"
+title: "bank marketing ex2"
 author: "*Buthaina Alshareef*"
-date: "*01-12-2020*"
+date: "*03-10-2020*"
 output:
   html_document:
    toc: true
@@ -12,7 +12,7 @@ output:
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-```{r}
+```{r, include=FALSE}
 # Packages required
 library(rsample)
 library(caret)

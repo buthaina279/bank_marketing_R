@@ -17,7 +17,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 # Prereqs 
 
-```{r slide-3, cache=TRUE}
+```{r slide-3, include=FALSE}
 # Packages required
 library(rsample)
 library(caret)
@@ -569,7 +569,7 @@ bank_final_xgb %>%
 
 
 ```{r}
-load("myWorkspace_ex4.rds")
+#load("myWorkspace_ex4.rds")
 ```
 
 

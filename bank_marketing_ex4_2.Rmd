@@ -95,6 +95,9 @@ Using H2O, build and assess the following individual models:
 - random forest base learner.
 - GBM and/or XGBoost base learner.
 
+the error rate in Random Forest is higher than gbm based on MSE with 0.07789691 and 0.0770109 respectively
+
+
 
 ```{r}
 best_rf <- h2o.randomForest(
@@ -177,6 +180,8 @@ best_gbm
 #7
 Using h2o.stackedEnsemble(), stack these three models.
 - Does your stacked model performance improve over and above the individual learners?
+yes it becomes 0.06649911 MSE 
+
 - Explain your reasoning why or why not performance improves.
 
 
