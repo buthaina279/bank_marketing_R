@@ -73,7 +73,7 @@ Output variable (desired target):
 21 - y - has the client subscribed a term deposit? (binary: 'yes','no')
 
 
-```{r, echoFALSE}
+```{r, include=FALSE}
 # Packages required
 library(rsample)
 library(caret)
@@ -137,7 +137,7 @@ bank <- select(bank, -duration)
 
 
 explore the distribution of categorical variables 
-```{r}
+```{r, cache=TRUE}
 
 ins <- inspect_cat(bank)
 show_plot(ins)
@@ -194,7 +194,7 @@ ggplot(bank, aes(y)) +
 Due to the imbalance in the classes we are going to split the data set into train and test with stratified sample 
 
 
-```{r}
+```{r, cache=TRUE}
 set.seed(123) # for reproducibility
 split <- initial_split(bank, strata = "y", prop = 0.7)
 train <- training(split)
@@ -214,7 +214,7 @@ no
 - Do any features have near-zero variance?
 pdays 
 
-```{r slide-16}
+```{r slide-16, cache=TRUE}
 caret::nearZeroVar(train, saveMetrics= TRUE) %>% 
   rownames_to_column() %>% 
   filter(nzv)
@@ -226,11 +226,11 @@ Assess the categorical features.
 - Are categorical levels equally spread out across the features or is “lumping” occurring?
 the age and education are equally spread out across features 
 
-```{r}
+```{r, cache=TRUE}
 count(train, job) %>% arrange(n)
 ```
 
-```{r}
+```{r, cache=TRUE}
 count(train, education) %>% arrange(n)
 ```
 
@@ -240,18 +240,18 @@ one-hot:
 all the categorical variables
 because many models require that all predictor variables be numeric.
 
-```{r}
+```{r, cache=TRUE}
 count(train, month)
 ```
 
-```{r}
+```{r, cache=TRUE}
 count(train, day_of_week)
 ```
 
 
 Execute a basic feature engineering process.
 First, apply a KNN model to your data without pre-applying feature engineering processes.
-```{r}
+```{r, cache=TRUE}
 cv <- trainControl(
   method = "repeatedcv", 
   number = 10, 
@@ -265,7 +265,7 @@ hyper_grid <- expand.grid(k = seq(2, 26, by = 2))
 ```
 
 
-```{r}
+```{r, cache=TRUE}
 knn_fit <- train(
   y ~ ., 
   data = train, 
@@ -278,13 +278,13 @@ knn_fit <- train(
 ```
 
 
-```{r}
+```{r, cache=TRUE}
 knn_fit
 ```
 
 
 Create and a apply a blueprint of feature engineering processes that you think will help your model improve.
-```{r}
+```{r, cache=TRUE}
 blueprint <- recipe(y ~ ., data = train) %>%
   step_nzv(all_nominal()) %>%
   step_center(all_numeric(), -all_outcomes()) %>%
@@ -296,7 +296,7 @@ blueprint <- recipe(y ~ ., data = train) %>%
 
 Now reapply the KNN model to your data that has been feature engineered.
 
-```{r}
+```{r, cache=TRUE}
 knn_fit_bp <- train(
   blueprint, 
   data = train, 
@@ -307,7 +307,7 @@ knn_fit_bp <- train(
   )
 ```
 
-```{r}
+```{r, cache=TRUE}
 knn_fit_bp
 ```
 

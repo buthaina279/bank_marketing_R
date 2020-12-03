@@ -1591,48 +1591,6 @@ div.tocify {
 <p>20 - nr.employed: number of employees - quarterly indicator (numeric)</p>
 <p>Output variable (desired target):</p>
 <p>21 - y - has the client subscribed a term deposit? (binary: ‘yes’,‘no’)</p>
-<pre class="r"><code># Packages required
-library(rsample)
-library(caret)</code></pre>
-<pre><code>## Loading required package: lattice</code></pre>
-<pre><code>## Loading required package: ggplot2</code></pre>
-<pre class="r"><code>library(tidyverse)</code></pre>
-<pre><code>## ── Attaching packages ─────────────────────────────────────── tidyverse 1.3.0 ──</code></pre>
-<pre><code>## ✓ tibble  3.0.4     ✓ dplyr   1.0.2
-## ✓ tidyr   1.1.2     ✓ stringr 1.4.0
-## ✓ readr   1.4.0     ✓ forcats 0.5.0
-## ✓ purrr   0.3.4</code></pre>
-<pre><code>## ── Conflicts ────────────────────────────────────────── tidyverse_conflicts() ──
-## x dplyr::filter() masks stats::filter()
-## x dplyr::lag()    masks stats::lag()
-## x purrr::lift()   masks caret::lift()</code></pre>
-<pre class="r"><code>library(inspectdf) 
-library(ISLR)
-library(dplyr)
-library(ggplot2)
-library(recipes)</code></pre>
-<pre><code>## 
-## Attaching package: &#39;recipes&#39;</code></pre>
-<pre><code>## The following object is masked from &#39;package:stringr&#39;:
-## 
-##     fixed</code></pre>
-<pre><code>## The following object is masked from &#39;package:stats&#39;:
-## 
-##     step</code></pre>
-<pre class="r"><code>library(psych)</code></pre>
-<pre><code>## 
-## Attaching package: &#39;psych&#39;</code></pre>
-<pre><code>## The following objects are masked from &#39;package:ggplot2&#39;:
-## 
-##     %+%, alpha</code></pre>
-<pre class="r"><code># Model interpretability packages
-library(vip)       # variable importance</code></pre>
-<pre><code>## 
-## Attaching package: &#39;vip&#39;</code></pre>
-<pre><code>## The following object is masked from &#39;package:utils&#39;:
-## 
-##     vi</code></pre>
-<pre class="r"><code>library(ROCR)      # ROC curve</code></pre>
 <pre class="r"><code>#http://archive.ics.uci.edu/ml/datasets/Bank+Marketing
 
 #read the data set

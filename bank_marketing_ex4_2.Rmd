@@ -15,7 +15,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 
 
-```{r}
+```{r, include=FALSE}
 library(recipes)
 library(h2o)
 # Packages required
@@ -30,7 +30,7 @@ library(psych)
 
 ```
 
-```{r}
+```{r, cache=TRUE, include=FALSE }
 h2o.init(max_mem_size = "5g")
 ```
 
@@ -38,7 +38,7 @@ h2o.init(max_mem_size = "5g")
 
 
 
-```{r}
+```{r, cache=TRUE}
 #http://archive.ics.uci.edu/ml/datasets/Bank+Marketing
 
 #read the data set
@@ -46,18 +46,18 @@ bank <- read.csv2("data/bank-additional-full.csv", dec = ".")
 ```
 
 convert all characters to factors
-```{r}
+```{r, cache=TRUE}
 bank[sapply(bank, is.character)] <- lapply(bank[sapply(bank, is.character)], 
                                            as.factor)
 ```
 
 drop duration and nr.employed columns 
-```{r}
+```{r, cache=TRUE}
 bank <- select(bank, c (-duration, - nr.employed))
 ```
 
 take 70% train set to check if the training method works well
-```{r}
+```{r, cache=TRUE}
 set.seed(123) # for reproducibility
 split <- initial_split(bank, strata = "y", prop = 0.7)
 train <- training(split)
@@ -67,7 +67,7 @@ test <- testing(split)
 
 
 
-```{r}
+```{r, cache=TRUE}
 
 # make sure we have consistent categorical levels
 blueprint <- recipe(y ~ ., data = train) %>%
@@ -99,7 +99,7 @@ the error rate in Random Forest is higher than gbm based on MSE with 0.07789691 
 
 
 
-```{r}
+```{r, cache=TRUE}
 best_rf <- h2o.randomForest(
   x = X,
   y = Y,
@@ -124,7 +124,7 @@ best_rf
 ```
 
 
-```{r slide-133}
+```{r slide-133, cache=TRUE}
 # Train & Cross-validate a GBM model
 best_gbm <- h2o.gbm(
   x = X,
@@ -149,7 +149,7 @@ best_gbm
 ```
 
 
-```{r slide-133}
+```{r, , cache=TRUE, echo= FALSE, message= FALSE}
 # to save time I will ignore this
 
 # Train & Cross-validate an XGBoost model
@@ -182,10 +182,8 @@ Using h2o.stackedEnsemble(), stack these three models.
 - Does your stacked model performance improve over and above the individual learners?
 yes it becomes 0.06649911 MSE 
 
-- Explain your reasoning why or why not performance improves.
 
-
-```{r slide-13}
+```{r slide-13, cache=TRUE}
 ensemble_tree <- h2o.stackedEnsemble(
   x = X,
   y = Y,
@@ -200,25 +198,25 @@ ensemble_tree
 
 
 
-```{r slide-14a}
+```{r slide-14a, cache=TRUE}
 per_rf <- h2o.performance(best_rf, newdata = test_h2o)
   arrange(h2o.accuracy(per_rf))
 ```
 
 
-```{r}
+```{r, cache=TRUE}
 per_gbm <- h2o.performance(best_gbm, newdata = test_h2o)
   arrange(h2o.accuracy(per_gbm))
 ```
 
 
-```{r }
+```{r , cache=TRUE}
 # per_xgb <- h2o.performance(best_xgb, newdata = test_h2o)
 #   arrange(h2o.accuracy(per_xgb))
 ```
 
 
-```{r }
+```{r , cache=TRUE}
 
 # stacked glm
 results_tree <- h2o.performance(ensemble_tree, newdata = test_h2o)
@@ -230,10 +228,9 @@ results_tree <- h2o.performance(ensemble_tree, newdata = test_h2o)
 
 #7
 Perform a stacked grid search with an H2O GBM or XGBoost model.
-- What was your best performing model?
-- Do you notice any patterns in the hyperparameter settings for the top 5-10 models?
 
-```{r slide-16}
+Does not work
+```{r , cache=TRUE}
 # GBM hyperparameters
 hyper_grid <- list(
   max_depth = c(1, 3, 5),
@@ -246,7 +243,7 @@ hyper_grid <- list(
 ```
 
 
-```{r slide-16}
+```{r , cache=TRUE}
 # random grid search criteria
 search_criteria <- list(
   strategy = "RandomDiscrete",
@@ -255,61 +252,60 @@ search_criteria <- list(
 ```
 
 
-```{r slide-16}
+```{r , cache=TRUE}
 # build random grid search 
-random_grid <- h2o.grid(
-  algorithm = "gbm",
-  grid_id = "gbm_grid",
-  x = X,
-  y = Y,
-  training_frame = train_h2o,
-  hyper_params = hyper_grid,
-  search_criteria = search_criteria,
-  ntrees = 5000,
-  stopping_metric = "AUTO",
-  stopping_rounds = 10,
-  stopping_tolerance = 0,
-  nfolds = 10,
-  fold_assignment = "Modulo",
-  keep_cross_validation_predictions = TRUE,
-  seed = 123
-)
+# random_grid <- h2o.grid(
+#   algorithm = "gbm",
+#   grid_id = "gbm_grid",
+#   x = X,
+#   y = Y,
+#   training_frame = train_h2o,
+#   hyper_params = hyper_grid,
+#   search_criteria = search_criteria,
+#   ntrees = 5000,
+#   stopping_metric = "AUTO",
+#   stopping_rounds = 10,
+#   stopping_tolerance = 0,
+#   nfolds = 10,
+#   fold_assignment = "Modulo",
+#   keep_cross_validation_predictions = TRUE,
+#   seed = 123
+# )
 ```
 
 
-```{r slide-16}
-# collect the results and sort by our model performance metric of choice
-random_grid_perf <- h2o.getGrid(
-  grid_id = "gbm_grid", 
-  sort_by = "accuracy"
-)
-random_grid_perf
+```{r , cache=TRUE}
+# random_grid_perf <- h2o.getGrid(
+#   grid_id = "gbm_grid",
+#   sort_by = "accuracy"
+# )
+# random_grid_perf
 ```
 
 Single best model applied to our test set:
 
-```{r slide-18a}
+```{r ,cache=TRUE}
 # Grab the model_id for the top model, chosen by validation error
-best_model_id <- random_grid_perf@model_ids[[1]]
-best_model <- h2o.getModel(best_model_id)
-h2o.performance(best_model, newdata = test_h2o)
+# best_model_id <- random_grid_perf@model_ids[[1]]
+# best_model <- h2o.getModel(best_model_id)
+# h2o.performance(best_model, newdata = test_h2o)
 ```
 
 Meta learner of our grid search applied to our test set:
 
-```{r slide-18b}
+```{r}
 # Train a stacked ensemble using the GBM grid
-ensemble <- h2o.stackedEnsemble(
-  x = X,
-  y = Y,
-  training_frame = train_h2o,
-  model_id = "ensemble_gbm_grid",
-  base_models = random_grid@model_ids,
-  metalearner_algorithm = "gbm"
-)
-
-# Eval ensemble performance on a test set
-h2o.performance(ensemble, newdata = test_h2o)
+# ensemble <- h2o.stackedEnsemble(
+#   x = X,
+#   y = Y,
+#   training_frame = train_h2o,
+#   model_id = "ensemble_gbm_grid",
+#   base_models = random_grid@model_ids,
+#   metalearner_algorithm = "gbm"
+# )
+# 
+# # Eval ensemble performance on a test set
+# h2o.performance(ensemble, newdata = test_h2o)
 ```
 
 
@@ -317,39 +313,33 @@ h2o.performance(ensemble, newdata = test_h2o)
 Perform an AutoML search across multiple types of learners.
 
 
-```{r slide-21}
-auto_ml <- h2o.automl(
-  x = X,
-  y = Y,
-  training_frame = train_h2o,
-  nfolds = 5,
-  max_runtime_secs = 60*120, # 2 hours!
-  keep_cross_validation_predictions = TRUE,
-  sort_metric = "AUC",
-  seed = 123,
-  stopping_rounds = 50,
-  stopping_metric = "misclassification",
-  stopping_tolerance = 0
-)
-
-# assess the leader board
-# get top model: auto_ml@leader
-auto_ml@leaderboard %>% as.data.frame()
+```{r, cache=TRUE}
+# auto_ml <- h2o.automl(
+#   x = X,
+#   y = Y,
+#   training_frame = train_h2o,
+#   nfolds = 5,
+#   max_runtime_secs = 60*120, # 2 hours!
+#   keep_cross_validation_predictions = TRUE,
+#   sort_metric = "AUC",
+#   seed = 123,
+#   stopping_rounds = 50,
+#   stopping_metric = "misclassification",
+#   stopping_tolerance = 0
+# )
+# 
+# # assess the leader board
+# # get top model: auto_ml@leader
+# auto_ml@leaderboard %>% as.data.frame()
 ```
 
 
 
-
-- Which types of base learners are in the top 10?
-- What model provides the optimal performance?
-- Apply this model to the test set. How does the test loss function compare to the training cross-validated RMSE?
-
-
 ```{r}
-save.image("myWorkspace_ex4_22.rds")
+#save.image("myWorkspace_ex4_22.rds")
 ```
 
 
 ```{r}
-load("myWorkspace_ex4_22.rds")
+#load("myWorkspace_ex4_22.rds")
 ```
